@@ -15,8 +15,11 @@ import pdb
 from torchvision import transforms
 
 logger = logging.getLogger(__name__)
-                
-def save_checkpoint(state, epoch, is_best, checkpoint_dir='./models', filename='checkpoint', thres=100):
+
+
+def save_checkpoint(
+    state, epoch, is_best, checkpoint_dir="./models", filename="checkpoint", thres=100
+):
     """
     - state
     - epoch
@@ -30,31 +33,33 @@ def save_checkpoint(state, epoch, is_best, checkpoint_dir='./models', filename='
         os.makedirs(checkpoint_dir)
 
     if epoch >= thres:
-        file_path = os.path.join(checkpoint_dir, filename + '_{}'.format(str(epoch)) + '.pth.tar')
+        file_path = os.path.join(
+            checkpoint_dir, filename + "_{}".format(str(epoch)) + ".pth.tar"
+        )
     else:
-        file_path = os.path.join(checkpoint_dir, filename + '.pth.tar')
+        file_path = os.path.join(checkpoint_dir, filename + ".pth.tar")
     torch.save(state, file_path)
-    logger.info('==> save model at {}'.format(file_path))
+    logger.info("==> save model at {}".format(file_path))
 
     if is_best:
-        cpy_file = os.path.join(checkpoint_dir, filename+'_model_best.pth.tar')
+        cpy_file = os.path.join(checkpoint_dir, filename + "_model_best.pth.tar")
         shutil.copyfile(file_path, cpy_file)
-        logger.info('==> save best model at {}'.format(cpy_file))
-        
+        logger.info("==> save best model at {}".format(cpy_file))
+
 
 def mask_iou(pred, target, eps=1e-7, size_average=True):
     r"""
-        param: 
-            pred: size [N x H x W]
-            target: size [N x H x W]
-        output:
-            iou: size [1] (size_average=True) or [N] (size_average=False)
+    param:
+        pred: size [N x H x W]
+        target: size [N x H x W]
+    output:
+        iou: size [1] (size_average=True) or [N] (size_average=False)
     """
     assert len(pred.shape) == 3 and pred.shape == target.shape
 
     N = pred.size(0)
     num_pixels = pred.size(-1) * pred.size(-2)
-    no_obj_flag = (target.sum(2).sum(1) == 0)
+    no_obj_flag = target.sum(2).sum(1) == 0
 
     temp_pred = torch.sigmoid(pred)
     pred = (temp_pred > 0.5).int()
@@ -65,10 +70,9 @@ def mask_iou(pred, target, eps=1e-7, size_average=True):
     inter[no_obj_flag] = inter_no_obj[no_obj_flag]
     union[no_obj_flag] = num_pixels
 
-    iou = torch.sum(inter / (union+eps)) / N
+    iou = torch.sum(inter / (union + eps)) / N
 
     return iou
-
 
 
 def _eval_pr(y_pred, y, num, cuda_flag=True):
@@ -85,21 +89,22 @@ def _eval_pr(y_pred, y, num, cuda_flag=True):
 
     return prec, recall
 
+
 def Eval_Fmeasure(pred, gt, measure_path, pr_num=255):
     r"""
-        param:
-            pred: size [N x H x W]
-            gt: size [N x H x W]
-        output:
-            iou: size [1] (size_average=True) or [N] (size_average=False)
+    param:
+        pred: size [N x H x W]
+        gt: size [N x H x W]
+    output:
+        iou: size [1] (size_average=True) or [N] (size_average=False)
     """
-    print('=> eval [FMeasure]..')
-    pred = torch.sigmoid(pred) # =======================================[important]
+    print("=> eval [FMeasure]..")
+    pred = torch.sigmoid(pred)  # =======================================[important]
     N = pred.size(0)
     beta2 = 0.3
     avg_f, img_num = 0.0, 0
     score = torch.zeros(pr_num)
-    fLog = open(os.path.join(measure_path, 'FMeasure.txt'), 'w')
+    fLog = open(os.path.join(measure_path, "FMeasure.txt"), "w")
     print("{} videos in this batch".format(N))
 
     for img_id in range(N):
@@ -108,7 +113,7 @@ def Eval_Fmeasure(pred, gt, measure_path, pr_num=255):
             continue
         prec, recall = _eval_pr(pred[img_id], gt[img_id], pr_num)
         f_score = (1 + beta2) * prec * recall / (beta2 * prec + recall)
-        f_score[f_score != f_score] = 0 # for Nan
+        f_score[f_score != f_score] = 0  # for Nan
         avg_f += f_score
         img_num += 1
         score = avg_f / img_num
@@ -116,7 +121,6 @@ def Eval_Fmeasure(pred, gt, measure_path, pr_num=255):
     fLog.close()
 
     return score.max().item()
-
 
 
 def save_mask(pred_masks, save_base_path, category_list, video_name_list):
@@ -128,7 +132,7 @@ def save_mask(pred_masks, save_base_path, category_list, video_name_list):
 
     pred_masks = pred_masks.squeeze(2)
     pred_masks = (torch.sigmoid(pred_masks) > 0.5).int()
-    
+
     pred_masks = pred_masks.view(-1, 5, pred_masks.shape[-2], pred_masks.shape[-1])
     pred_masks = pred_masks.cpu().data.numpy().astype(np.uint8)
     pred_masks *= 255
@@ -139,36 +143,48 @@ def save_mask(pred_masks, save_base_path, category_list, video_name_list):
         mask_save_path = os.path.join(save_base_path, category, video_name)
         if not os.path.exists(mask_save_path):
             os.makedirs(mask_save_path, exist_ok=True)
-        one_video_masks = pred_masks[idx] # [5, 1, 224, 224]
+        one_video_masks = pred_masks[idx]  # [5, 1, 224, 224]
         for video_id in range(len(one_video_masks)):
             one_mask = one_video_masks[video_id]
-            output_name = "%s_%d.png"%(video_name, video_id)
-            im = Image.fromarray(one_mask).convert('P')
-            im.save(os.path.join(mask_save_path, output_name), format='PNG')
+            output_name = "%s_%d.png" % (video_name, video_id)
+            im = Image.fromarray(one_mask).convert("P")
+            im.save(os.path.join(mask_save_path, output_name), format="PNG")
 
 
-def save_raw_img_mask(anno_file_path, raw_img_base_path, mask_base_path, split='test', r=0.5):
-    df = pd.read_csv(anno_file_path, sep=',')
-    df_test = df[df['split'] == split]
+def save_raw_img_mask(
+    anno_file_path, raw_img_base_path, mask_base_path, split="test", r=0.5
+):
+    df = pd.read_csv(anno_file_path, sep=",")
+    df_test = df[df["split"] == split]
     count = 0
     for video_id in range(len(df_test)):
         video_name, category = df_test.iloc[video_id][0], df_test.iloc[video_id][2]
         raw_img_path = os.path.join(raw_img_base_path, split, category, video_name)
         for img_id in range(5):
-            img_name = "%s_%d.png"%(video_name, img_id + 1)
+            img_name = "%s_%d.png" % (video_name, img_id + 1)
             raw_img = cv2.imread(os.path.join(raw_img_path, img_name))
-            mask = cv2.imread(os.path.join(mask_base_path, 'pred_masks', category, video_name, "%s_%d.png"%(video_name, img_id)))    
+            mask = cv2.imread(
+                os.path.join(
+                    mask_base_path,
+                    "pred_masks",
+                    category,
+                    video_name,
+                    "%s_%d.png" % (video_name, img_id),
+                )
+            )
             # pdb.set_trace()
-            mask=cv2.resize(mask,(raw_img.shape[1],raw_img.shape[0]),interpolation=cv2.INTER_AREA)
+            mask = cv2.resize(
+                mask, (raw_img.shape[1], raw_img.shape[0]), interpolation=cv2.INTER_AREA
+            )
             raw_img_mask = cv2.addWeighted(raw_img, 1, mask, r, 0)
-            save_img_path = os.path.join(mask_base_path, 'img_add_masks', category, video_name)
+            save_img_path = os.path.join(
+                mask_base_path, "img_add_masks", category, video_name
+            )
             if not os.path.exists(save_img_path):
                 os.makedirs(save_img_path, exist_ok=True)
             cv2.imwrite(os.path.join(save_img_path, img_name), raw_img_mask)
         count += 1
-    print(f'count: {count} videos')
-
-
+    print(f"count: {count} videos")
 
 
 if __name__ == "__main__":
@@ -203,5 +219,3 @@ if __name__ == "__main__":
     one_real_mask = one_mask * 255
 
     pdb.set_trace()
-
-

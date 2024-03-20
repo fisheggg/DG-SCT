@@ -37,14 +37,108 @@ lr_rate = [0.02, 0.05, 0.1]
 enable_token_label = False  # token label
 class_map_path = "class_hier_map.npy"
 class_filter = None
-retrieval_index = [15382, 9202, 130, 17618, 17157, 17516, 16356, 6165, 13992, 9238, 5550, 5733, 1914, 1600, 3450, 13735,
-                   11108, 3762,
-                   9840, 11318, 8131, 4429, 16748, 4992, 16783, 12691, 4945, 8779, 2805, 9418, 2797, 14357, 5603, 212,
-                   3852, 12666, 1338, 10269, 2388, 8260, 4293, 14454, 7677, 11253, 5060, 14938, 8840, 4542, 2627, 16336,
-                   8992, 15496, 11140, 446, 6126, 10691, 8624, 10127, 9068, 16710, 10155, 14358, 7567, 5695, 2354, 8057,
-                   17635, 133, 16183, 14535, 7248, 4560, 14429, 2463, 10773, 113, 2462, 9223, 4929, 14274, 4716, 17307,
-                   4617, 2132, 11083, 1039, 1403, 9621, 13936, 2229, 2875, 17840, 9359, 13311, 9790, 13288, 4750, 17052,
-                   8260, 14900]
+retrieval_index = [
+    15382,
+    9202,
+    130,
+    17618,
+    17157,
+    17516,
+    16356,
+    6165,
+    13992,
+    9238,
+    5550,
+    5733,
+    1914,
+    1600,
+    3450,
+    13735,
+    11108,
+    3762,
+    9840,
+    11318,
+    8131,
+    4429,
+    16748,
+    4992,
+    16783,
+    12691,
+    4945,
+    8779,
+    2805,
+    9418,
+    2797,
+    14357,
+    5603,
+    212,
+    3852,
+    12666,
+    1338,
+    10269,
+    2388,
+    8260,
+    4293,
+    14454,
+    7677,
+    11253,
+    5060,
+    14938,
+    8840,
+    4542,
+    2627,
+    16336,
+    8992,
+    15496,
+    11140,
+    446,
+    6126,
+    10691,
+    8624,
+    10127,
+    9068,
+    16710,
+    10155,
+    14358,
+    7567,
+    5695,
+    2354,
+    8057,
+    17635,
+    133,
+    16183,
+    14535,
+    7248,
+    4560,
+    14429,
+    2463,
+    10773,
+    113,
+    2462,
+    9223,
+    4929,
+    14274,
+    4716,
+    17307,
+    4617,
+    2132,
+    11083,
+    1039,
+    1403,
+    9621,
+    13936,
+    2229,
+    2875,
+    17840,
+    9359,
+    13311,
+    9790,
+    13288,
+    4750,
+    17052,
+    8260,
+    14900,
+]
 token_label_range = [0.2, 0.6]
 enable_time_shift = False  # shift time
 enable_label_enhance = False  # enhance hierarchical label
@@ -76,10 +170,10 @@ htsat_stride = (4, 4)
 htsat_num_head = [4, 8, 16, 32]
 htsat_dim = 96
 htsat_depth = [2, 2, 6, 2]
-#change according to the path
-checkpoint_path=os.path.join(parent_dir, "pretrain/models")
-#change according to the model
-checkpoint="630k-audioset-fusion-best.pt"
+# change according to the path
+checkpoint_path = os.path.join(parent_dir, "pretrain/models")
+# change according to the model
+checkpoint = "630k-audioset-fusion-best.pt"
 
 swin_pretrain_path = None
 # "/home/Research/model_backup/pretrain/swin_tiny_c24_patch4_window8_256.pth"
@@ -105,7 +199,7 @@ esm_model_pathes = [
     "/home/Research/model_backup/AudioSet/HTSAT_AudioSet_Saved_3.ckpt",
     "/home/Research/model_backup/AudioSet/HTSAT_AudioSet_Saved_4.ckpt",
     "/home/Research/model_backup/AudioSet/HTSAT_AudioSet_Saved_5.ckpt",
-    "/home/Research/model_backup/AudioSet/HTSAT_AudioSet_Saved_6.ckpt"
+    "/home/Research/model_backup/AudioSet/HTSAT_AudioSet_Saved_6.ckpt",
 ]
 
 # for framewise localization
@@ -114,9 +208,16 @@ test_file = "htsat-test-ensemble"
 fl_local = False  # indicate if we need to use this dataset for the framewise detection
 fl_dataset = "/home/Research/desed/desed_eval.npy"
 fl_class_num = [
-    "Speech", "Frying", "Dishes", "Running_water",
-    "Blender", "Electric_shaver_toothbrush", "Alarm_bell_ringing",
-    "Cat", "Dog", "Vacuum_cleaner"
+    "Speech",
+    "Frying",
+    "Dishes",
+    "Running_water",
+    "Blender",
+    "Electric_shaver_toothbrush",
+    "Alarm_bell_ringing",
+    "Cat",
+    "Dog",
+    "Vacuum_cleaner",
 ]
 
 # map 527 classes into 10 classes
@@ -130,8 +231,8 @@ fl_audioset_mapping = [
     [310, 388, 389, 390, 391, 392, 393, 394, 395, 396, 397, 398, 399, 400, 401, 402],
     [81, 82, 83, 84, 85],
     [74, 75, 76, 77, 78, 79],
-    [377]
+    [377],
 ]
-#audio and video weights in contrastive learning
+# audio and video weights in contrastive learning
 v_weight = 2
 a_weight = 5

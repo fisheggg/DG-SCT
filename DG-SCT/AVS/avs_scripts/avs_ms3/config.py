@@ -4,32 +4,42 @@ import pdb
 import os
 
 path = os.getcwd()
-root_path = os.path.abspath(os.path.join(path, os.pardir, os.pardir, os.pardir, os.pardir))
+root_path = os.path.abspath(
+    os.path.join(path, os.pardir, os.pardir, os.pardir, os.pardir)
+)
 
 """
 default config
 """
 cfg = edict()
-cfg.BATCH_SIZE = 4 # default 16
-cfg.LAMBDA_1 = 5 # default: 5
-cfg.MASK_NUM = 1 # 5 for fully supervised, 1 for weakly supervised
+cfg.BATCH_SIZE = 4  # default 16
+cfg.LAMBDA_1 = 5  # default: 5
+cfg.MASK_NUM = 1  # 5 for fully supervised, 1 for weakly supervised
 
 ###############################
 # TRAIN
 cfg.TRAIN = edict()
 
 cfg.TRAIN.FREEZE_AUDIO_EXTRACTOR = True
-cfg.TRAIN.PRETRAINED_VGGISH_MODEL_PATH = "../../pretrained_backbones/vggish-10086976.pth"
+cfg.TRAIN.PRETRAINED_VGGISH_MODEL_PATH = (
+    "../../pretrained_backbones/vggish-10086976.pth"
+)
 cfg.TRAIN.PREPROCESS_AUDIO_TO_LOG_MEL = False
 cfg.TRAIN.POSTPROCESS_LOG_MEL_WITH_PCA = False
-cfg.TRAIN.PRETRAINED_PCA_PARAMS_PATH = "../../pretrained_backbones/vggish_pca_params-970ea276.pth"
+cfg.TRAIN.PRETRAINED_PCA_PARAMS_PATH = (
+    "../../pretrained_backbones/vggish_pca_params-970ea276.pth"
+)
 cfg.TRAIN.FREEZE_VISUAL_EXTRACTOR = True
 cfg.TRAIN.PRETRAINED_RESNET50_PATH = "../../pretrained_backbones/resnet50-19c8e357.pth"
 cfg.TRAIN.PRETRAINED_PVTV2_PATH = "../../pretrained_backbones/pvt_v2_b5.pth"
 
 cfg.TRAIN.FINE_TUNE_SSSS = False
-cfg.TRAIN.PRETRAINED_S4_aAVS_WO_TPAVI_PATH = "../avs_s4/train_logs/checkpoints/checkpoint_xxx.pth.tar"
-cfg.TRAIN.PRETRAINED_S4_AVS_WITH_TPAVI_PATH = "../avs_s4/train_logs/checkpoints/checkpoint_xxx.pth.tar"
+cfg.TRAIN.PRETRAINED_S4_aAVS_WO_TPAVI_PATH = (
+    "../avs_s4/train_logs/checkpoints/checkpoint_xxx.pth.tar"
+)
+cfg.TRAIN.PRETRAINED_S4_AVS_WITH_TPAVI_PATH = (
+    "../avs_s4/train_logs/checkpoints/checkpoint_xxx.pth.tar"
+)
 
 ###############################
 # DATA
@@ -38,11 +48,21 @@ cfg.DATA = edict()
 # cfg.DATA.DIR_IMG = "../../avsbench_data//Multi-sources/ms3_data/visual_frames"
 # cfg.DATA.DIR_AUDIO_LOG_MEL = "../../avsbench_data//Multi-sources/ms3_data/audio_log_mel"
 # cfg.DATA.DIR_MASK = "../../avsbench_data//Multi-sources/ms3_data/gt_masks"
-cfg.DATA.ANNO_CSV = os.path.join(root_path, "data/AVSBench_data/Multi-sources/ms3_meta_data.csv")
-cfg.DATA.DIR_IMG = os.path.join(root_path, "data/AVSBench_data/Multi-sources/ms3_data/visual_frames")
-cfg.DATA.DIR_AUDIO_LOG_MEL = os.path.join(root_path, "data/AVSBench_data/Multi-sources/ms3_data/audio_log_mel")
-cfg.DATA.DIR_AUDIO_WAV = os.path.join(root_path, "data/AVSBench_data/Multi-sources/ms3_data/audio_wav")
-cfg.DATA.DIR_MASK = os.path.join(root_path, "data/AVSBench_data/Multi-sources/ms3_data/gt_masks")
+cfg.DATA.ANNO_CSV = os.path.join(
+    root_path, "data/AVSBench_data/Multi-sources/ms3_meta_data.csv"
+)
+cfg.DATA.DIR_IMG = os.path.join(
+    root_path, "data/AVSBench_data/Multi-sources/ms3_data/visual_frames"
+)
+cfg.DATA.DIR_AUDIO_LOG_MEL = os.path.join(
+    root_path, "data/AVSBench_data/Multi-sources/ms3_data/audio_log_mel"
+)
+cfg.DATA.DIR_AUDIO_WAV = os.path.join(
+    root_path, "data/AVSBench_data/Multi-sources/ms3_data/audio_wav"
+)
+cfg.DATA.DIR_MASK = os.path.join(
+    root_path, "data/AVSBench_data/Multi-sources/ms3_data/gt_masks"
+)
 cfg.DATA.IMG_SIZE = (224, 224)
 
 ###############################

@@ -34,6 +34,8 @@ import torch
 
 
 from ipdb import set_trace
+
+
 def Hbeta_torch(D, beta=1.0):
     P = torch.exp(-D.clone() * beta.to(D.device))
 
@@ -47,15 +49,15 @@ def Hbeta_torch(D, beta=1.0):
 
 def x2p_torch(X, tol=1e-5, perplexity=30.0):
     """
-        Performs a binary search to get P-values in such a way that each
-        conditional Gaussian has the same perplexity.
+    Performs a binary search to get P-values in such a way that each
+    conditional Gaussian has the same perplexity.
     """
 
     # Initialize some variables
     print("Computing pairwise distances...")
     (n, d) = X.shape
 
-    sum_X = torch.sum(X*X, 1)
+    sum_X = torch.sum(X * X, 1)
     D = torch.add(torch.add(-2 * torch.mm(X, X.t()), sum_X).t(), sum_X)
 
     P = torch.zeros(n, n).to(X.device)
@@ -65,7 +67,6 @@ def x2p_torch(X, tol=1e-5, perplexity=30.0):
 
     # Loop over all datapoints
     for i in range(n):
-
         # Print progress
         if i % 500 == 0:
             print("Computing P-values for point %d of %d..." % (i, n))
@@ -74,7 +75,7 @@ def x2p_torch(X, tol=1e-5, perplexity=30.0):
         # there may be something wrong with this setting None
         betamin = None
         betamax = None
-        Di = D[i, n_list[0:i]+n_list[i+1:n]]
+        Di = D[i, n_list[0:i] + n_list[i + 1 : n]]
 
         (H, thisP) = Hbeta_torch(Di, beta[i])
 
@@ -82,20 +83,19 @@ def x2p_torch(X, tol=1e-5, perplexity=30.0):
         Hdiff = H - logU
         tries = 0
         while torch.abs(Hdiff) > tol and tries < 50:
-
             # If not, increase or decrease precision
             if Hdiff > 0:
                 betamin = beta[i].clone()
                 if betamax is None:
-                    beta[i] = beta[i] * 2.
+                    beta[i] = beta[i] * 2.0
                 else:
-                    beta[i] = (beta[i] + betamax) / 2.
+                    beta[i] = (beta[i] + betamax) / 2.0
             else:
                 betamax = beta[i].clone()
                 if betamin is None:
-                    beta[i] = beta[i] / 2.
+                    beta[i] = beta[i] / 2.0
                 else:
-                    beta[i] = (beta[i] + betamin) / 2.
+                    beta[i] = (beta[i] + betamin) / 2.0
 
             # Recompute the values
             (H, thisP) = Hbeta_torch(Di, beta[i])
@@ -104,7 +104,7 @@ def x2p_torch(X, tol=1e-5, perplexity=30.0):
             tries += 1
 
         # Set the final row of P
-        P[i, n_list[0:i]+n_list[i+1:n]] = thisP
+        P[i, n_list[0:i] + n_list[i + 1 : n]] = thisP
 
     # Return final P-matrix
     return P
@@ -119,7 +119,7 @@ def pca_torch(X, no_dims=50):
     # split M real
     for i in range(d):
         if l[i, 1] != 0:
-            M[:, i+1] = M[:, i]
+            M[:, i + 1] = M[:, i]
             i += 1
 
     Y = torch.mm(X, M[:, 0:no_dims])
@@ -128,9 +128,9 @@ def pca_torch(X, no_dims=50):
 
 def tsne(X, no_dims=2, initial_dims=50, perplexity=30.0):
     """
-        Runs t-SNE on the dataset in the NxD array X to reduce its
-        dimensionality to no_dims dimensions. The syntaxis of the function is
-        `Y = tsne.tsne(X, no_dims, perplexity), where X is an NxD NumPy array.
+    Runs t-SNE on the dataset in the NxD array X to reduce its
+    dimensionality to no_dims dimensions. The syntaxis of the function is
+    `Y = tsne.tsne(X, no_dims, perplexity), where X is an NxD NumPy array.
     """
 
     # Check inputs
@@ -158,18 +158,17 @@ def tsne(X, no_dims=2, initial_dims=50, perplexity=30.0):
     P = x2p_torch(X, 1e-5, perplexity)
     P = P + P.t()
     P = P / torch.sum(P)
-    P = P * 4.    # early exaggeration
+    P = P * 4.0  # early exaggeration
     print("get P shape", P.shape)
     P = torch.max(P, torch.tensor([1e-21]).to(P.device))
 
     # Run iterations
     for iter in range(max_iter):
-
         # Compute pairwise affinities
-        sum_Y = torch.sum(Y*Y, 1)
-        num = -2. * torch.mm(Y, Y.t())
-        num = 1. / (1. + torch.add(torch.add(num, sum_Y).t(), sum_Y))
-        num[range(n), range(n)] = 0.
+        sum_Y = torch.sum(Y * Y, 1)
+        num = -2.0 * torch.mm(Y, Y.t())
+        num = 1.0 / (1.0 + torch.add(torch.add(num, sum_Y).t(), sum_Y))
+        num[range(n), range(n)] = 0.0
         Q = num / torch.sum(num)
         try:
             Q = torch.max(Q, torch.tensor([1e-12]).to(X.device))
@@ -178,7 +177,9 @@ def tsne(X, no_dims=2, initial_dims=50, perplexity=30.0):
         # Compute gradient
         PQ = P - Q
         for i in range(n):
-            dY[i, :] = torch.sum((PQ[:, i] * num[:, i]).repeat(no_dims, 1).t() * (Y[i, :] - Y), 0)
+            dY[i, :] = torch.sum(
+                (PQ[:, i] * num[:, i]).repeat(no_dims, 1).t() * (Y[i, :] - Y), 0
+            )
 
         # Perform the update
         if iter < 20:
@@ -186,7 +187,9 @@ def tsne(X, no_dims=2, initial_dims=50, perplexity=30.0):
         else:
             momentum = final_momentum
 
-        gains = (gains + 0.2) * ((dY > 0.) != (iY > 0.)).double() + (gains * 0.8) * ((dY > 0.) == (iY > 0.)).double()
+        gains = (gains + 0.2) * ((dY > 0.0) != (iY > 0.0)).double() + (gains * 0.8) * (
+            (dY > 0.0) == (iY > 0.0)
+        ).double()
         gains[gains < min_gain] = min_gain
         iY = momentum * iY - eta * (gains * dY)
         Y = Y + iY
@@ -199,7 +202,7 @@ def tsne(X, no_dims=2, initial_dims=50, perplexity=30.0):
 
         # Stop lying about P-values
         if iter == 100:
-            P = P / 4.
+            P = P / 4.0
 
     # Return solution
     return Y

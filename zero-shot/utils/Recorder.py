@@ -27,10 +27,11 @@ class Recorder(object):
             shutil.rmtree(self.weight_fig_folder, ignore_errors=True)
         os.mkdir(self.weight_fig_folder)"""
 
-        print ("\n======> Result will be saved at: ", self.save_path)
+        print("\n======> Result will be saved at: ", self.save_path)
 
-    def copy_code(self, src="./", dst="./code/", ignore_folder='Exps'):
+    def copy_code(self, src="./", dst="./code/", ignore_folder="Exps"):
         import uuid
+
         if os.path.isdir(dst):
             # dst = "/".join(dst.split("/")[:-1])+"_"+str(uuid.uuid4())+"/"
             dst = "/".join(dst.split("/")) + "code_" + str(uuid.uuid4()) + "/"
@@ -42,9 +43,12 @@ class Recorder(object):
                     file_abs_list.append(root + "/" + name)
 
         for file_abs in file_abs_list:
-            file_split = file_abs.split("/")[-1].split('.')
+            file_split = file_abs.split("/")[-1].split(".")
             # if len(file_split) >= 2 and file_split[1] == "py":
-            if os.path.getsize(file_abs)/1024/1024 < 10 and not file_split[-1] == "pyc":
+            if (
+                os.path.getsize(file_abs) / 1024 / 1024 < 10
+                and not file_split[-1] == "pyc"
+            ):
                 src_file = file_abs
                 dst_file = dst + file_abs.replace(src_abs, "")
                 if not os.path.exists(os.path.dirname(dst_file)):
@@ -58,24 +62,23 @@ class Recorder(object):
     def writeopt(self, opt):
         with open(self.opt_file, "w") as f:
             for k, v in opt.__dict__.items():
-                f.write(str(k)+": "+str(v)+"\n")
+                f.write(str(k) + ": " + str(v) + "\n")
 
     def writelog(self, input_data):
-        txt_file = open(self.log_file, 'a+')
+        txt_file = open(self.log_file, "a+")
         txt_file.write(str(input_data) + "\n")
         txt_file.close()
 
     def writereadme(self, input_data):
-        txt_file = open(self.readme, 'a+')
+        txt_file = open(self.readme, "a+")
         txt_file.write(str(input_data) + "\n")
         txt_file.close()
-
 
     def gennetwork(self, var):
         self.graph.draw(var=var)
 
     def savenetwork(self):
-        self.graph.save(file_name=self.save_path+"network.svg")
+        self.graph.save(file_name=self.save_path + "network.svg")
 
     """def writeweights(self, input_data, block_id, layer_id, epoch_id):
         txt_path = self.weight_folder + "conv_weight_" + str(epoch_id) + ".log"
@@ -88,4 +91,3 @@ class Recorder(object):
     def drawhist(self):
         drawer = DrawHistogram(txt_folder=self.weight_folder, fig_folder=self.weight_fig_folder)
         drawer.draw()"""
-

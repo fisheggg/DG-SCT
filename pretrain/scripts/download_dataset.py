@@ -1,8 +1,9 @@
 import os
 import pandas as pd
 
+
 def download(set, name, t_seg):
-    #label = label.replace(" ", "_")  # avoid space in folder name
+    # label = label.replace(" ", "_")  # avoid space in folder name
     path_data = os.path.join(set, "video")
     print(path_data)
     if not os.path.exists(path_data):
@@ -17,39 +18,39 @@ def download(set, name, t_seg):
         print("already exists, skip")
         return
 
-    print( "download the whole video for: [%s] - [%s]" % (set, name))
-    command1 = 'youtube-dl --ignore-config '
+    print("download the whole video for: [%s] - [%s]" % (set, name))
+    command1 = "youtube-dl --ignore-config "
     command1 += link + " "
     command1 += "-o " + filename_full_video + " "
     command1 += "-f best "
 
-    #command1 += '-q '  # print no log
-    #print command1
+    # command1 += '-q '  # print no log
+    # print command1
     os.system(command1)
 
     t_start, t_end = t_seg
     t_dur = t_end - t_start
     print("trim the video to [%.1f-%.1f]" % (t_start, t_end))
-    command2 = 'ffmpeg '
-    command2 += '-ss '
-    command2 += str(t_start) + ' '
-    command2 += '-i '
-    command2 += filename_full_video + ' '
-    command2 += '-t '
-    command2 += str(t_dur) + ' '
-    command2 += '-vcodec libx264 '
-    command2 += '-acodec aac -strict -2 '
-    command2 += filename + ' '
-    command2 += '-y '  # overwrite without asking
-    command2 += '-loglevel -8 '  # print no log
-    #print(command2)
+    command2 = "ffmpeg "
+    command2 += "-ss "
+    command2 += str(t_start) + " "
+    command2 += "-i "
+    command2 += filename_full_video + " "
+    command2 += "-t "
+    command2 += str(t_dur) + " "
+    command2 += "-vcodec libx264 "
+    command2 += "-acodec aac -strict -2 "
+    command2 += filename + " "
+    command2 += "-y "  # overwrite without asking
+    command2 += "-loglevel -8 "  # print no log
+    # print(command2)
     os.system(command2)
     try:
         os.remove(filename_full_video)
     except:
         return
 
-    print ("finish the video as: " + filename)
+    print("finish the video as: " + filename)
 
 
 ##%% read the label encoding
@@ -67,7 +68,7 @@ def download(set, name, t_seg):
 # %% read the video trim time indices
 filename_source = "data/AVVP_dataset_full.csv"  #
 set = "data/LLP_dataset"
-df = pd.read_csv(filename_source, header=0, sep='\t')
+df = pd.read_csv(filename_source, header=0, sep="\t")
 filenames = df["filename"]
 length = len(filenames)
 print(length)
@@ -83,4 +84,3 @@ for i in range(length):
     download(set, name, segments[name])
     names.append(name)
 print(len(segments))
-

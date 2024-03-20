@@ -17,6 +17,7 @@ import os
 
 from .clip import clip
 from .clip.simple_tokenizer import SimpleTokenizer as _Tokenizer
+
 _tokenizer = _Tokenizer()
 
 
@@ -27,13 +28,13 @@ class ClipAdapter(nn.Module):
             nn.Linear(c_in, c_in // reduction, bias=False),
             nn.ReLU(inplace=True),
             nn.Linear(c_in // reduction, c_in, bias=False),
-            nn.ReLU(inplace=True)
+            nn.ReLU(inplace=True),
         )
 
     def forward(self, x):
         x = self.fc(x)
         return x
-    
+
 
 class MLPLayers(nn.Module):
     def __init__(self, units=[512, 512, 512], nonlin=nn.ReLU(), dropout=0.1):
@@ -61,7 +62,7 @@ def tokenizer(text, max_length=77):
     max_length is default to 77 from the OpenAI CLIP parameters
     We assume text to be a single string, but it can also be a list of strings
     """
-    
+
     roberta_tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
     result = roberta_tokenizer(
         text,
@@ -72,7 +73,7 @@ def tokenizer(text, max_length=77):
     )
     return {k: v.squeeze(0) for k, v in result.items()}
 
-    
+
 class CLAPTextEncoder(nn.Module):
     def __init__(self, cfg, classnames, tmp):
         super().__init__()
@@ -80,31 +81,36 @@ class CLAPTextEncoder(nn.Module):
         n_cls = len(classnames)
         if not cfg.weak:
             n_cls += 1
-            classnames.append('background')
-        
+            classnames.append("background")
+
         prompts = ["The sounds of " + name for name in classnames]
         self.text = tokenizer(prompts)
-        
+
         text_branch_list, text_transform_list, text_projection_list = tmp
-        self.text_branch = RobertaModel.from_pretrained('roberta-base')
-        self.text_branch.load_state_dict({k[12:]:v for k, v in text_branch_list.items()})
-        self.text_transform = MLPLayers(units=[512, 512, 512], dropout=0.1)
-        self.text_transform.load_state_dict({k[15:]:v for k, v in text_transform_list.items()})
-        self.text_projection = nn.Sequential(
-            nn.Linear(768, 512),
-            nn.ReLU(),
-            nn.Linear(512, 512)
+        self.text_branch = RobertaModel.from_pretrained("roberta-base")
+        self.text_branch.load_state_dict(
+            {k[12:]: v for k, v in text_branch_list.items()}
         )
-        self.text_projection.load_state_dict({k[16:]:v for k, v in text_projection_list.items()})
-        
+        self.text_transform = MLPLayers(units=[512, 512, 512], dropout=0.1)
+        self.text_transform.load_state_dict(
+            {k[15:]: v for k, v in text_transform_list.items()}
+        )
+        self.text_projection = nn.Sequential(
+            nn.Linear(768, 512), nn.ReLU(), nn.Linear(512, 512)
+        )
+        self.text_projection.load_state_dict(
+            {k[16:]: v for k, v in text_projection_list.items()}
+        )
+
     def forward(self):
         x = self.text_branch(
-            input_ids=self.text["input_ids"].to('cuda'),
-            attention_mask=self.text["attention_mask"].to('cuda'),
+            input_ids=self.text["input_ids"].to("cuda"),
+            attention_mask=self.text["attention_mask"].to("cuda"),
         )["pooler_output"]
         x = self.text_projection(x)
         return x
-            
+
+
 class TextEncoder(nn.Module):
     def __init__(self, clip_model):
         super().__init__()
@@ -123,11 +129,14 @@ class TextEncoder(nn.Module):
         x = self.ln_final(x)
         # x.shape = [batch_size, n_ctx, transformer.width]
         # take features from the eot embedding (eot_token is the highest number in each sequence)
-        x = x[torch.arange(x.shape[0]), tokenized_prompts.argmax(dim=-1)] @ self.text_projection
+        x = (
+            x[torch.arange(x.shape[0]), tokenized_prompts.argmax(dim=-1)]
+            @ self.text_projection
+        )
 
         return x
 
-    
+
 class PromptLearner(nn.Module):
     def __init__(self, cfg, classnames, clip_model):
         super().__init__()
@@ -136,13 +145,15 @@ class PromptLearner(nn.Module):
             n_cls += 1
         n_ctx = cfg.N_CTX
         ctx_init = cfg.CTX_INIT
-            
+
         dtype = clip_model.dtype
         ctx_dim = clip_model.ln_final.weight.shape[0]
         vis_dim = clip_model.visual.output_dim
         clip_imsize = clip_model.visual.input_resolution
         cfg_imsize = 224
-        assert cfg_imsize == clip_imsize, f"cfg_imsize ({cfg_imsize}) must equal to clip_imsize ({clip_imsize})"
+        assert (
+            cfg_imsize == clip_imsize
+        ), f"cfg_imsize ({cfg_imsize}) must equal to clip_imsize ({clip_imsize})"
 
         if ctx_init:
             # use given words to initialize context vectors
@@ -153,8 +164,7 @@ class PromptLearner(nn.Module):
                 embedding = clip_model.token_embedding(prompt).type(dtype)
             ctx_vectors = embedding[0, 1 : 1 + n_ctx, :]
             prompt_prefix = ctx_init
-            
-                
+
             nn.init.normal_(ctx_vectors, std=0.02)
             prompt_prefix = " ".join(["X"] * n_ctx)
 
@@ -162,20 +172,26 @@ class PromptLearner(nn.Module):
         print(f"Number of context words (tokens): {n_ctx}")
 
         self.ctx = nn.Parameter(ctx_vectors)
-        
-        self.meta_net = nn.Sequential(OrderedDict([
-            ("linear1", nn.Linear(vis_dim, vis_dim // 16)),
-            ("relu", nn.ReLU(inplace=True)),
-            ("linear2", nn.Linear(vis_dim // 16, ctx_dim))
-        ]))
-        
+
+        self.meta_net = nn.Sequential(
+            OrderedDict(
+                [
+                    ("linear1", nn.Linear(vis_dim, vis_dim // 16)),
+                    ("relu", nn.ReLU(inplace=True)),
+                    ("linear2", nn.Linear(vis_dim // 16, ctx_dim)),
+                ]
+            )
+        )
+
         classnames = [name.replace("_", " ") for name in classnames]
         if not cfg.weak:
-            classnames.append('background')
+            classnames.append("background")
         name_lens = [len(_tokenizer.encode(name)) for name in classnames]
         prompts = [prompt_prefix + " " + name + "." for name in classnames]
 
-        tokenized_prompts = torch.cat([clip.tokenize(p) for p in prompts])  # (n_cls, n_tkn)
+        tokenized_prompts = torch.cat(
+            [clip.tokenize(p) for p in prompts]
+        )  # (n_cls, n_tkn)
         with torch.no_grad():
             embedding = clip_model.token_embedding(tokenized_prompts).type(dtype)
 
@@ -190,7 +206,7 @@ class PromptLearner(nn.Module):
         self.tokenized_prompts = tokenized_prompts  # torch.Tensor
         self.name_lens = name_lens
         self.class_token_position = cfg.class_token_position
-        
+
     def construct_prompts(self, ctx, prefix, suffix, label=None):
         # dim0 is either batch_size (during training) or n_cls (during testing)
         # ctx: context tokens, with shape of (dim0, n_ctx, ctx_dim)
@@ -204,7 +220,7 @@ class PromptLearner(nn.Module):
         prompts = torch.cat(
             [
                 prefix,  # (dim0, 1, dim)
-                ctx,     # (dim0, n_ctx, dim)
+                ctx,  # (dim0, n_ctx, dim)
                 suffix,  # (dim0, *, dim)
             ],
             dim=1,
@@ -213,19 +229,18 @@ class PromptLearner(nn.Module):
         return prompts
 
     def forward(self, features):
-        
         prefix = self.token_prefix
         suffix = self.token_suffix
-        ctx = self.ctx                     # (n_ctx, ctx_dim)
-        
+        ctx = self.ctx  # (n_ctx, ctx_dim)
+
         if ctx.dim() == 2:
             ctx = ctx.unsqueeze(0).expand(self.n_cls, -1, -1)
-            
+
         if self.class_token_position == "end":
             prompts = torch.cat(
                 [
                     prefix,  # (n_cls, 1, dim)
-                    ctx,     # (n_cls, n_ctx, dim)
+                    ctx,  # (n_cls, n_ctx, dim)
                     suffix,  # (n_cls, *, dim)
                 ],
                 dim=1,
@@ -243,11 +258,11 @@ class PromptLearner(nn.Module):
                 ctx_i_half2 = ctx[i : i + 1, half_n_ctx:, :]
                 prompt = torch.cat(
                     [
-                        prefix_i,     # (1, 1, dim)
+                        prefix_i,  # (1, 1, dim)
                         ctx_i_half1,  # (1, n_ctx//2, dim)
-                        class_i,      # (1, name_len, dim)
+                        class_i,  # (1, name_len, dim)
                         ctx_i_half2,  # (1, n_ctx//2, dim)
-                        suffix_i,     # (1, *, dim)
+                        suffix_i,  # (1, *, dim)
                     ],
                     dim=1,
                 )
@@ -265,8 +280,8 @@ class PromptLearner(nn.Module):
                 prompt = torch.cat(
                     [
                         prefix_i,  # (1, 1, dim)
-                        class_i,   # (1, name_len, dim)
-                        ctx_i,     # (1, n_ctx, dim)
+                        class_i,  # (1, name_len, dim)
+                        ctx_i,  # (1, n_ctx, dim)
                         suffix_i,  # (1, *, dim)
                     ],
                     dim=1,
@@ -276,7 +291,7 @@ class PromptLearner(nn.Module):
 
         else:
             raise ValueError
-            
+
         return prompts
 
 
@@ -294,32 +309,55 @@ def load_clip_to_cpu(cfg):
         state_dict = torch.load(model_path, map_location="cpu")
 
     model = clip.build_model(state_dict or model.state_dict())
-    
+
     return model
 
 
 def generate_category_list(root_path, dataset_name):
     if dataset_name == "vggsound":
-        file_path = os.path.join(root_path, 'data/vggsound/VggsoundAVEL40kCategories.txt')
+        file_path = os.path.join(
+            root_path, "data/vggsound/VggsoundAVEL40kCategories.txt"
+        )
     elif dataset_name == "AVE":
-        file_path = os.path.join(root_path, 'data/AVE/categories.txt')
+        file_path = os.path.join(root_path, "data/AVE/categories.txt")
     elif dataset_name == "LLP":
-        categories = ['Speech', 'Car', 'Cheering', 'Dog', 'Cat', 'Frying_(food)',
-                  'Basketball_bounce', 'Fire_alarm', 'Chainsaw', 'Cello', 'Banjo',
-                  'Singing', 'Chicken_rooster', 'Violin_fiddle', 'Vacuum_cleaner',
-                  'Baby_laughter', 'Accordion', 'Lawn_mower', 'Motorcycle', 'Helicopter',
-                  'Acoustic_guitar', 'Telephone_bell_ringing', 'Baby_cry_infant_cry', 'Blender',
-                  'Clapping']
+        categories = [
+            "Speech",
+            "Car",
+            "Cheering",
+            "Dog",
+            "Cat",
+            "Frying_(food)",
+            "Basketball_bounce",
+            "Fire_alarm",
+            "Chainsaw",
+            "Cello",
+            "Banjo",
+            "Singing",
+            "Chicken_rooster",
+            "Violin_fiddle",
+            "Vacuum_cleaner",
+            "Baby_laughter",
+            "Accordion",
+            "Lawn_mower",
+            "Motorcycle",
+            "Helicopter",
+            "Acoustic_guitar",
+            "Telephone_bell_ringing",
+            "Baby_cry_infant_cry",
+            "Blender",
+            "Clapping",
+        ]
         id_to_idx = {id: index for index, id in enumerate(categories)}
         return categories, id_to_idx
     else:
         raise NotImplementedError
-    
+
     category_list = []
-    
-    with open(file_path, 'r') as fr:
+
+    with open(file_path, "r") as fr:
         for line in fr.readlines():
             category_list.append(line.strip())
     id_to_idx = {id: index for index, id in enumerate(category_list)}
-    
+
     return category_list, id_to_idx

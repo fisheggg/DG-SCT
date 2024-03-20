@@ -16,7 +16,8 @@ class VGG(nn.Module):
             nn.Linear(4096, 4096),
             nn.ReLU(True),
             nn.Linear(4096, 128),
-            nn.ReLU(True))
+            nn.ReLU(True),
+        )
 
     def forward(self, x):
         x = self.features(x)
@@ -49,14 +50,19 @@ class Postprocessor(nn.Module):
         super(Postprocessor, self).__init__()
         # Create empty matrix, for user's state_dict to load
         self.pca_eigen_vectors = torch.empty(
-            (vggish_params.EMBEDDING_SIZE, vggish_params.EMBEDDING_SIZE,),
+            (
+                vggish_params.EMBEDDING_SIZE,
+                vggish_params.EMBEDDING_SIZE,
+            ),
             dtype=torch.float,
         )
         self.pca_means = torch.empty(
             (vggish_params.EMBEDDING_SIZE, 1), dtype=torch.float
         )
 
-        self.pca_eigen_vectors = nn.Parameter(self.pca_eigen_vectors, requires_grad=False)
+        self.pca_eigen_vectors = nn.Parameter(
+            self.pca_eigen_vectors, requires_grad=False
+        )
         self.pca_means = nn.Parameter(self.pca_means, requires_grad=False)
 
     def postprocess(self, embeddings_batch):
@@ -73,9 +79,9 @@ class Postprocessor(nn.Module):
         assert len(embeddings_batch.shape) == 2, "Expected 2-d batch, got %r" % (
             embeddings_batch.shape,
         )
-        assert (
-            embeddings_batch.shape[1] == vggish_params.EMBEDDING_SIZE
-        ), "Bad batch shape: %r" % (embeddings_batch.shape,)
+        assert embeddings_batch.shape[1] == vggish_params.EMBEDDING_SIZE, (
+            "Bad batch shape: %r" % (embeddings_batch.shape,)
+        )
 
         # Apply PCA.
         # - Embeddings come in as [batch_size, embedding_size].
@@ -84,7 +90,9 @@ class Postprocessor(nn.Module):
         # - Premultiply by PCA matrix of shape [output_dims, input_dims]
         #   where both are are equal to embedding_size in our case.
         # - Transpose result back to [batch_size, embedding_size].
-        pca_applied = torch.mm(self.pca_eigen_vectors, (embeddings_batch.t() - self.pca_means)).t()
+        pca_applied = torch.mm(
+            self.pca_eigen_vectors, (embeddings_batch.t() - self.pca_means)
+        ).t()
 
         # Quantize by:
         # - clipping to [min, max] range
@@ -144,12 +152,14 @@ class VGGish(VGG):
     def __init__(self, cfg, device=None):
         super().__init__(make_layers())
         if cfg.TRAIN.FREEZE_AUDIO_EXTRACTOR:
-            state_dict =  torch.load(cfg.TRAIN.PRETRAINED_VGGISH_MODEL_PATH)
+            state_dict = torch.load(cfg.TRAIN.PRETRAINED_VGGISH_MODEL_PATH)
             super().load_state_dict(state_dict)
-            print(f'==> Load pretrained VGGish parameters from {cfg.TRAIN.PRETRAINED_VGGISH_MODEL_PATH}')
+            print(
+                f"==> Load pretrained VGGish parameters from {cfg.TRAIN.PRETRAINED_VGGISH_MODEL_PATH}"
+            )
 
         if device is None:
-            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             print("device: ", device)
         self.device = device
 
@@ -157,14 +167,15 @@ class VGGish(VGG):
         self.postprocess = cfg.TRAIN.POSTPROCESS_LOG_MEL_WITH_PCA
         if self.postprocess:
             self.pproc = Postprocessor()
-            if cfg.TRAIN.FREEZE_AUDIO_EXTRACTOR :
+            if cfg.TRAIN.FREEZE_AUDIO_EXTRACTOR:
                 state_dict = torch.load(cfg.TRAIN.PRETRAINED_PCA_PARAMS_PATH)
                 # TODO: Convert the state_dict to torch
                 state_dict[vggish_params.PCA_EIGEN_VECTORS_NAME] = torch.as_tensor(
                     state_dict[vggish_params.PCA_EIGEN_VECTORS_NAME], dtype=torch.float
                 )
                 state_dict[vggish_params.PCA_MEANS_NAME] = torch.as_tensor(
-                    state_dict[vggish_params.PCA_MEANS_NAME].reshape(-1, 1), dtype=torch.float
+                    state_dict[vggish_params.PCA_MEANS_NAME].reshape(-1, 1),
+                    dtype=torch.float,
                 )
                 self.pproc.load_state_dict(state_dict)
         self.to(self.device)
